@@ -1,11 +1,49 @@
 import os
+import shutil
+from functools import lru_cache
+from urllib.parse import quote
 
 from rich.console import Console
+from rich.style import Style
 from rich.table import Table
+from rich.text import Text
 from rich import box
 from .git_utils import RepoStatus, BranchInfo
 
 console = Console()
+
+
+@lru_cache(maxsize=1)
+def _vscode_is_installed() -> bool:
+    """Check for VS Code without starting a process."""
+    if shutil.which("code"):
+        return True
+
+    install_roots = (
+        os.environ.get("LOCALAPPDATA"),
+        os.environ.get("PROGRAMFILES"),
+        os.environ.get("PROGRAMFILES(X86)"),
+    )
+    return any(
+        root and os.path.isfile(os.path.join(root, "Microsoft VS Code", "Code.exe"))
+        for root in install_roots
+    )
+
+
+def _repo_name(repo_path: str) -> str | Text:
+    """Render a repo name as a VS Code link when terminal hyperlinks work."""
+    name = os.path.basename(repo_path)
+    if not console.is_terminal or not _vscode_is_installed():
+        return name
+
+    path = os.path.abspath(repo_path).replace("\\", "/")
+    vscode_uri = "vscode://file/{}".format(quote(path, safe="/:"))
+    text = Text()
+    text.append(name, style=Style(color="cyan", link=vscode_uri, underline=True))
+    # Rich extends a cell's final style across its padding. End with a plain
+    # space so the hyperlink underline stops at the repository name.
+    text.append(" ", style=Style(color="cyan"))
+    return text
 
 
 def _fmt_ab(ahead: int, behind: int, clean: bool = True) -> str:
@@ -72,7 +110,7 @@ class LiveDisplay:
         table.add_column("Status")
 
         for repo_path in self.repos:
-            repo_name = os.path.basename(repo_path)
+            repo_name = _repo_name(repo_path)
             s = self._statuses.get(repo_path)
 
             if repo_path in self._fetching:
@@ -108,7 +146,7 @@ class LiveDisplay:
         table.add_column("Status")
 
         for repo_path in self.repos:
-            repo_name = os.path.basename(repo_path)
+            repo_name = _repo_name(repo_path)
             s = self._statuses.get(repo_path)
             branches = self._branches.get(repo_path, [])
 
