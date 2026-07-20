@@ -52,14 +52,19 @@ def find_git_repos(root_dir: str) -> list[str]:
     return repos
 
 
-def run_git(repo_path: str, args: list[str]) -> tuple[str, str, int]:
+def run_git(
+    repo_path: str, args: list[str], timeout: int = 30
+) -> tuple[str, str, int]:
     try:
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
         result = subprocess.run(
             ["git"] + args,
             cwd=repo_path,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=timeout,
+            env=env,
         )
         return result.stdout.strip(), result.stderr.strip(), result.returncode
     except subprocess.TimeoutExpired:
@@ -69,8 +74,26 @@ def run_git(repo_path: str, args: list[str]) -> tuple[str, str, int]:
 
 
 def fetch_repo(repo_path: str) -> bool:
-    _, _, rc = run_git(repo_path, ["fetch", "--all", "--prune", "--quiet"])
+    _, _, rc = run_git(
+        repo_path, ["fetch", "--all", "--prune", "--quiet"], timeout=10
+    )
     return rc == 0
+
+
+def requires_github_auth(repo_path: str) -> bool:
+    """Return whether fetching this repo can require GitHub authentication.
+
+    A GitHub remote can invoke either ``gh auth git-credential`` or Git
+    Credential Manager. Both may open an interactive GitHub login, so defer
+    every GitHub-hosted repo rather than relying on one credential helper.
+    """
+    remote_urls, _, rc = run_git(
+        repo_path, ["config", "--get-regexp", r"^remote\..*\.url$"]
+    )
+    if rc != 0:
+        return False
+
+    return any("github.com" in remote_url.lower() for remote_url in remote_urls.splitlines())
 
 
 def parse_status_porcelain(repo_path: str) -> RepoStatus:
