@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multi-git"
+version = "0.1.0"
+description = "Run git commands across multiple repositories"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Borja Penuelas", email = "bmpenuelas@gmail.com"},
+]
+license = {text = "MIT"}
+dependencies = [
+    "rich>=13",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Utilities",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+
+[project.urls]
+Homepage = "https://github.com/bmpenuelas/multi-git"
+
+[project.scripts]
+multi-git = "multi_git.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

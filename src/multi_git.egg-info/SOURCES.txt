@@ -1,0 +1,12 @@
+pyproject.toml
+src/multi_git/__init__.py
+src/multi_git/__main__.py
+src/multi_git/cli.py
+src/multi_git/display.py
+src/multi_git/git_utils.py
+src/multi_git.egg-info/PKG-INFO
+src/multi_git.egg-info/SOURCES.txt
+src/multi_git.egg-info/dependency_links.txt
+src/multi_git.egg-info/entry_points.txt
+src/multi_git.egg-info/requires.txt
+src/multi_git.egg-info/top_level.txt
