@@ -69,7 +69,7 @@ def show_status(repos_status: list[RepoStatus]) -> None:
         console.print("[yellow]No git repositories found[/]")
         return
 
-    table = Table(title="multi-git status", box=box.ROUNDED)
+    table = Table(title="mgitm status", box=box.ROUNDED)
     table.add_column("Repository", style="cyan")
     table.add_column("Branch", style="bold")
     table.add_column("Remote")
@@ -93,7 +93,7 @@ def show_branch_all(repos_branches: list[list[BranchInfo]]) -> None:
         console.print("[yellow]No git repositories found[/]")
         return
 
-    table = Table(title="multi-git status — all branches", box=box.ROUNDED)
+    table = Table(title="mgitm status — all branches", box=box.ROUNDED)
     table.add_column("Repository", style="cyan")
     table.add_column("Branch", style="bold")
     table.add_column("Remote")

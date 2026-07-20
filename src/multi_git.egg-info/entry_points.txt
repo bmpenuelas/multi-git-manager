@@ -1,2 +1,0 @@
-[console_scripts]
-multi-git = multi_git.cli:main

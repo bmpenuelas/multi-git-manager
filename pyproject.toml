@@ -3,8 +3,8 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "multi-git"
-version = "0.1.0"
+name = "multi-git-manager"
+version = "0.1.1"
 description = "Run git commands across multiple repositories"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,10 +25,11 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/bmpenuelas/multi-git"
+Homepage = "https://github.com/bmpenuelas/multi-git-manager"
+Repository = "https://github.com/bmpenuelas/multi-git-manager"
 
 [project.scripts]
-multi-git = "multi_git.cli:main"
+mgitm = "multi_git_manager.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

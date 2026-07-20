@@ -1,4 +1,4 @@
-# multi-git
+# mgitm (multi-git-manager)
 
 Run git commands across multiple repositories at once.
 
@@ -8,7 +8,7 @@ a clean summary table — no more `cd`-ing into each folder to check what's goin
 ## Installation
 
 ```bash
-pip install multi-git
+pip install multi-git-manager
 ```
 
 Requires Python 3.10+ and `git` available on `PATH`.
@@ -18,8 +18,8 @@ Requires Python 3.10+ and `git` available on `PATH`.
 A directory with four repos:
 
 ```text
-$ multi-git status
-                    multi-git status
+$ mgitm status
+                    mgitm status
 ╭──────────┬──────────────┬─────────────────┬──────┬────────────────╮
 │ Repo     │ Branch       │ Remote          │ ↕    │ Status         │
 ├──────────┼──────────────┼─────────────────┼──────┼────────────────┤
@@ -38,8 +38,8 @@ $ multi-git status
 With `--branch_all`:
 
 ```text
-$ multi-git status --branch_all
-               multi-git status — all branches
+$ mgitm status --branch_all
+               mgitm status — all branches
 ╭──────────┬──────────────┬─────────────────┬──────┬─────────────╮
 │ Repo     │ Branch       │ Remote          │ ↕    │ Status      │
 ├──────────┼──────────────┼─────────────────┼──────┼─────────────┤
@@ -60,14 +60,14 @@ meaningful for the active branch.
 ## Usage
 
 ```
-multi-git status
+mgitm status
 ```
 
 Fetches all repos, then prints a table of branch, remote tracking, ahead/behind
 counts, and working-tree cleanliness.
 
 ```
-multi-git status --branch_all
+mgitm status --branch_all
 ```
 
 Same table, but lists every local branch as its own row instead of just the
@@ -75,11 +75,11 @@ checked-out one.
 
 ## Commands
 
-| Command                    | Description                                  |
-|----------------------------|----------------------------------------------|
-| `multi-git status`         | Fetch remotes and show per-repo summary      |
-| `multi-git status -h`      | Show help for the status command             |
-| `multi-git --help`         | Show top-level help                          |
+| Command               | Description                                  |
+|-----------------------|----------------------------------------------|
+| `mgitm status`        | Fetch remotes and show per-repo summary      |
+| `mgitm status -h`     | Show help for the status command             |
+| `mgitm --help`        | Show top-level help                          |
 
 ## PRs and new feature requests are welcome!
 

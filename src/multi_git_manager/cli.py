@@ -13,7 +13,7 @@ from .display import show_status, show_branch_all, console, Progress
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="multi-git",
+        prog="mgitm",
         description="Run git commands across multiple repositories",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
