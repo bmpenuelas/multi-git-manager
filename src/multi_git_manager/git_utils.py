@@ -18,6 +18,7 @@ class RepoStatus:
     is_clean: bool
     remote_branch: Optional[str] = None
     fetch_failed: bool = False
+    sync_conflict: bool = False
 
 
 @dataclass
