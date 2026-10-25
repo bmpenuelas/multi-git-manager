@@ -63,6 +63,8 @@ def _open_action(repo_path: str) -> str | Text:
 
 def _action(repo_path: str, status: RepoStatus) -> str | Text:
     """Return the safe sync action suggested by the current tracking state."""
+    if not status.is_initialized:
+        return ""
     if status.sync_conflict or not status.is_clean:
         return _open_action(repo_path)
     if status.fetch_failed or not status.remote_branch:
@@ -82,6 +84,8 @@ def _fmt_ab(ahead: int, behind: int, clean: bool = True) -> str:
 
 
 def _fmt_status(status: RepoStatus) -> str:
+    if not status.is_initialized:
+        return "[yellow]not initialized[/]"
     if status.sync_conflict:
         return "[red]rebase conflict[/]"
     if status.fetch_failed:

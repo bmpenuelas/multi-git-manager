@@ -45,8 +45,32 @@ _COPY_IGNORED_DIRECTORIES = frozenset(
 )
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
+class _HelpParser(argparse.ArgumentParser):
+    def format_help(self) -> str:
+        help_text = super().format_help()
+        for action in self._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for name, command_parser in action.choices.items():
+                    help_text += f"\n{name} command:\n{command_parser.format_help()}"
+        return help_text
+
+
+def _add_submodule_options(parser: argparse.ArgumentParser, default: object) -> None:
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--submodules", dest="include_submodules", action="store_true",
+        default=default,
+        help="Include submodules (default when the current directory is a repository)",
+    )
+    group.add_argument(
+        "--submodules-none", dest="include_submodules", action="store_false",
+        default=default,
+        help="Exclude submodules (default when scanning child repositories)",
+    )
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = _HelpParser(
         prog="mgitm",
         description="Run git commands across multiple repositories",
     )
@@ -56,32 +80,38 @@ def main() -> None:
         help="Skip fetching from remotes",
     )
     parser.add_argument(
-        "--branch_all",
+        "--branch-all",
         action="store_true",
-        help=argparse.SUPPRESS,
+        help="Show status for every local branch",
     )
+    _add_submodule_options(parser, default=None)
     subparsers = parser.add_subparsers(dest="command")
 
     status_parser = subparsers.add_parser(
         "status", help="Fetch and show status of all repos"
     )
+    _add_submodule_options(status_parser, default=argparse.SUPPRESS)
     status_parser.add_argument(
-        "--branch_all",
+        "--branch-all",
         action="store_true",
+        default=argparse.SUPPRESS,
         help="Show status for every local branch",
     )
     status_parser.add_argument(
         "--no-fetch",
         action="store_true",
-        help=argparse.SUPPRESS,
+        default=argparse.SUPPRESS,
+        help="Skip fetching from remotes",
     )
     action_parser = subparsers.add_parser(
         "action", help="Run an action selected from the status table"
     )
-    action_parser.add_argument("operation", choices=("push", "pull", "sync"))
-    action_parser.add_argument("--repo", required=True)
+    action_parser.add_argument(
+        "operation", choices=("push", "pull", "sync"), help="Git action to confirm and run"
+    )
+    action_parser.add_argument("--repo", required=True, help="Path to the Git repository")
     copy_parser = subparsers.add_parser(
-        "copy", help="Copy direct-child Git repositories to a destination"
+        "copy", help="Copy the current repository or child repositories to a destination"
     )
     copy_parser.add_argument("destination", help="Directory that will contain the copies")
     copy_parser.add_argument(
@@ -90,7 +120,11 @@ def main() -> None:
         help="Comma-separated repository directory names to copy (default: all)",
     )
     subparsers.add_parser("example", help="Show an example status table")
+    return parser
 
+
+def main() -> None:
+    parser = _build_parser()
     args = parser.parse_args()
 
     if args.command == "action":
@@ -110,7 +144,7 @@ def main() -> None:
         return
 
     root_dir = os.getcwd()
-    repos = find_git_repos(root_dir)
+    repos = find_git_repos(root_dir, include_submodules=args.include_submodules)
 
     if not repos:
         console.print(
@@ -274,17 +308,17 @@ def _selection_rows(
 def _copy_repositories(
     source_root: str, destination: str, requested_repos: list[str] | None = None
 ) -> None:
-    """Copy each direct-child repository, omitting reproducible dependencies."""
+    """Copy repositories once, including any submodule working trees."""
     source_root = os.path.abspath(source_root)
     destination = os.path.abspath(os.path.expanduser(destination))
-    repos = find_git_repos(source_root)
+    repos = find_git_repos(source_root, include_submodules=False)
 
     requested_names = _parse_copy_repos(requested_repos)
     if requested_names:
         repos, missing = _filter_copy_repos(repos, requested_names)
         if missing:
             console.print(
-                "[yellow]Not a direct-child Git repository:[/] {}".format(
+                "[yellow]Not a discovered Git repository:[/] {}".format(
                     ", ".join(missing)
                 )
             )
@@ -464,6 +498,11 @@ class _FetchController:
         # GitHub may invoke an interactive login through either gh or Git
         # Credential Manager, so fetch those repositories last.
         for repo_path in non_interactive_repos + github_auth_repos:
+            status = parse_status_porcelain(repo_path)
+            if not status.is_initialized:
+                self.display.set_status(repo_path, status)
+                self._refresh()
+                continue
             repo_name = os.path.basename(repo_path)
             self.display.set_fetching(repo_path)
             self._refresh()

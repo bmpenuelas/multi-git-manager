@@ -19,6 +19,7 @@ class RepoStatus:
     remote_branch: Optional[str] = None
     fetch_failed: bool = False
     sync_conflict: bool = False
+    is_initialized: bool = True
 
 
 @dataclass
@@ -36,11 +37,65 @@ class BranchInfo:
     is_clean: bool
 
 
-def find_git_repos(root_dir: str) -> list[str]:
+def _has_git_marker(path: str) -> bool:
+    return os.path.exists(os.path.join(path, ".git"))
+
+
+def find_git_repos(root_dir: str, include_submodules: bool | None = None) -> list[str]:
+    """Find the current repository, or direct children of a workspace folder.
+
+    By default, include submodules only when root_dir itself is a repository.
+    Never use an enclosing repository in place of scanning the given folder.
+    Include recursive gitlinks, even when their worktrees are not initialized.
+    Copy callers can omit separate submodule entries to avoid duplicate copies.
+    """
+    root_dir = os.path.abspath(root_dir)
+    is_repository = _has_git_marker(root_dir)
+    if is_repository:
+        repos = [root_dir]
+    else:
+        repos = _find_child_repos(root_dir)
+    if include_submodules is None:
+        include_submodules = is_repository
+    if not include_submodules:
+        return repos
+
+    result: list[str] = []
+    seen: set[str] = set()
+
+    def visit(path: str) -> None:
+        key = os.path.normcase(os.path.realpath(path))
+        if key in seen:
+            return
+        seen.add(key)
+        result.append(path)
+        if not _has_git_marker(path):
+            return
+        output, _, rc = run_git(path, ["ls-files", "--stage", "-z"])
+        if rc != 0:
+            return
+        for entry in output.split("\0"):
+            metadata, separator, relative_path = entry.partition("\t")
+            if separator and metadata.startswith("160000 "):
+                submodule = os.path.normpath(os.path.join(path, relative_path))
+                # Never traverse a gitlink redirected outside the worktree.
+                try:
+                    if os.path.commonpath((key, os.path.normcase(os.path.realpath(submodule)))) != key:
+                        continue
+                except ValueError:
+                    continue
+                visit(submodule)
+
+    for repo in repos:
+        visit(repo)
+    return result
+
+
+def _find_child_repos(root_dir: str) -> list[str]:
     repos: list[str] = []
     try:
         items = os.listdir(root_dir)
-    except PermissionError:
+    except OSError:
         return repos
 
     for item in sorted(items):
@@ -98,6 +153,14 @@ def requires_github_auth(repo_path: str) -> bool:
 
 
 def parse_status_porcelain(repo_path: str) -> RepoStatus:
+    if not _has_git_marker(repo_path):
+        # Git in an empty submodule directory would report its parent's status.
+        return RepoStatus(
+            repo_name=os.path.basename(repo_path), repo_path=repo_path,
+            branch="-", ahead=0, behind=0, has_staged=False,
+            has_unstaged=False, has_untracked=False, is_clean=False,
+            is_initialized=False,
+        )
     output, stderr, rc = run_git(repo_path, ["status", "--branch", "--porcelain"])
 
     repo_name = os.path.basename(repo_path)
@@ -211,6 +274,8 @@ def get_branch_tracking(
 
 
 def get_all_branches_status(repo_path: str, status: RepoStatus) -> list[BranchInfo]:
+    if not status.is_initialized:
+        return []
     current_branch = status.branch
     branches = get_local_branches(repo_path)
 
